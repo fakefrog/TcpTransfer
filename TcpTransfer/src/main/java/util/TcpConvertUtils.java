@@ -19,14 +19,20 @@ public class TcpConvertUtils {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory
             .getLogger(PackageUtils.class);
 
+    private static HashMap<Class, ArrayList<FieldInfo>> fieldInfoMap = new HashMap<>();
+
+
     public static byte[] ObjectToTcpBytes(Object object, Class clazz) throws IllegalAccessException {
-        ArrayList<FieldInfo> infos = map.get(clazz);
+        ArrayList<FieldInfo> infos = fieldInfoMap.get(clazz);
         ArrayList<byte[]> bytesList = new ArrayList<>();
         for (int i = 0; i < infos.size(); i++) {
             FieldInfo fieldInfo = infos.get(i);
             int size = fieldInfo.getSize();
             Field field = fieldInfo.getField();
             Object fetchObj = field.get(object);
+            if(fetchObj == null){
+                continue;
+            }
             String typeName = fieldInfo.getTypeName();
             byte[] bytes;
             switch (typeName) {
@@ -111,12 +117,13 @@ public class TcpConvertUtils {
         teacherBean.setStudentlist(studentList);
         teacherBean.setSex(1);
         teacherBean.setAge(50);
+        byte[] savedBytes = new byte[]{123,12,-12,45};
+        teacherBean.setBytes(savedBytes);
 
         byte[] bytes = ObjectToTcpBytes(teacherBean, teacherBean.getClass());
         System.out.println(Arrays.toString(bytes));
     }
 
-    private static HashMap<Class, ArrayList<FieldInfo>> map = new HashMap<>();
 
     public static void loadMessage(String packageName) throws IOException {
         if (StringUtils.isEmpty(packageName)) {
@@ -161,7 +168,7 @@ public class TcpConvertUtils {
                 }
                 getSuperFields(fieldInfos, clz);
                 Collections.sort(fieldInfos);
-                map.put(clz, fieldInfos);
+                fieldInfoMap.put(clz, fieldInfos);
             } catch (Exception e) {
                 logger.error("--------------注入Encode协议，失败------------{}", e);
             }

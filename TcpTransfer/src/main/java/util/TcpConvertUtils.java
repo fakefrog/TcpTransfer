@@ -28,25 +28,34 @@ public class TcpConvertUtils {
             int size = fieldInfo.getSize();
             Field field = fieldInfo.getField();
             Object fetchObj = field.get(object);
-            if (fieldInfo.isInt()) {
-                Integer value = (Integer) fetchObj;
-                byte[] bytes = intToBytes(value, size);
-                bytesList.add(bytes);
-            } else if (fieldInfo.isList()) {
-                ParameterizedType parameterizedType = (ParameterizedType) field.getGenericType();
-                Class actualClz = (Class) parameterizedType.getActualTypeArguments()[0];
-
-                ArrayList listObject = (ArrayList) fetchObj;
-                int listSize = listObject.size();
-                for (int index = 0; index < listSize; index++) {
-                    Object listO = listObject.get(index);
-                    byte[] bytes = ObjectToTcpBytes(listO, actualClz);
+            String typeName = fieldInfo.getTypeName();
+            byte[] bytes = null;
+            switch (typeName) {
+                case "Integer":
+                    Integer value = (Integer) fetchObj;
+                    bytes = intToBytes(value, size);
                     bytesList.add(bytes);
-                }
-            } else {
-                Class<?> objectClass = field.getType();
-                byte[] bytes = ObjectToTcpBytes(fetchObj, objectClass);
-                bytesList.add(bytes);
+                    break;
+                case "ArrayList":
+                    ParameterizedType parameterizedType = (ParameterizedType) field.getGenericType();
+                    Class actualClz = (Class) parameterizedType.getActualTypeArguments()[0];
+                    ArrayList listObject = (ArrayList) fetchObj;
+                    int listSize = listObject.size();
+                    for (int index = 0; index < listSize; index++) {
+                        Object listO = listObject.get(index);
+                        bytes = ObjectToTcpBytes(listO, actualClz);
+                        bytesList.add(bytes);
+                    }
+                    break;
+                case "Byte[]":
+                    bytes = (byte[])fetchObj;
+                    bytesList.add(bytes);
+                    break;
+                default:
+                    Class<?> objectClass = field.getType();
+                    bytes = ObjectToTcpBytes(fetchObj, objectClass);
+                    bytesList.add(bytes);
+                    break;
             }
         }
         int totalLen = 0;
@@ -139,15 +148,14 @@ public class TcpConvertUtils {
                     fieldInfo.setLevel(level);
                     fieldInfo.setSize(size);
                     fieldInfo.setField(field);
-                    if (field.getType().equals(java.lang.Integer.class)) {
-                        fieldInfo.setList(false);
-                        fieldInfo.setInt(true);
-                    } else if (field.getType().equals(java.util.ArrayList.class)) {
-                        fieldInfo.setList(true);
-                        fieldInfo.setInt(false);
+                    if (field.getType().equals(Integer.class)) {
+                        fieldInfo.setTypeName("Integer");
+                    } else if (field.getType().equals(ArrayList.class)) {
+                        fieldInfo.setTypeName("ArrayList");
+                    } else if (field.getType().equals(byte[].class)) {
+                        fieldInfo.setTypeName("Byte[]");
                     } else {
-                        fieldInfo.setInt(false);
-                        fieldInfo.setList(false);
+                        fieldInfo.setTypeName("Object");
                     }
                     fieldInfo.setClz(clz);
                     fieldInfos.add(fieldInfo);
@@ -184,14 +192,13 @@ public class TcpConvertUtils {
                 fieldInfo.setSize(size);
                 fieldInfo.setField(field);
                 if (field.getType().equals(Integer.class)) {
-                    fieldInfo.setList(false);
-                    fieldInfo.setInt(true);
+                    fieldInfo.setTypeName("Integer");
                 } else if (field.getType().equals(ArrayList.class)) {
-                    fieldInfo.setList(true);
-                    fieldInfo.setInt(false);
+                    fieldInfo.setTypeName("ArrayList");
+                } else if (field.getType().equals(byte[].class)) {
+                    fieldInfo.setTypeName("Byte[]");
                 } else {
-                    fieldInfo.setInt(false);
-                    fieldInfo.setList(false);
+                    fieldInfo.setTypeName("Object");
                 }
                 fieldInfo.setClz(superclass);
                 fieldInfos.add(fieldInfo);
@@ -206,31 +213,30 @@ public class TcpConvertUtils {
         private int order;
         private int size;
         private Field field;
-        private boolean isInt;
-        private boolean isList;
         private Class clz;
-        static int MAX_LEVEL = 3;
-        static int LEVEL_CONTAINS = 100;
+        private String typeName;
+        static final int MAX_LEVEL = 3;
+        static final int LEVEL_CONTAINS = 100;
 
         @Override
         public int compareTo(FieldInfo o) {
             int level = this.level;
             int order = this.order;
-            int weight = levelValue(level) + (order+levelValue(level))%levelValue(level);
+            int weight = levelValue(level) + (order + levelValue(level)) % levelValue(level);
             int levelTo = o.getLevel();
             int orderTo = o.getOrder();
-            int weightTo = levelValue(levelTo) + (orderTo+levelValue(levelTo))%levelValue(levelTo);
+            int weightTo = levelValue(levelTo) + (orderTo + levelValue(levelTo)) % levelValue(levelTo);
             return weight - weightTo;
         }
 
-        private int levelValue(int level){
-            if(level>MAX_LEVEL){
+        private int levelValue(int level) {
+            if (level > MAX_LEVEL) {
                 throw new RuntimeException();
             }
             double levelContain = LEVEL_CONTAINS;
             int baseValue = 0;
-            for (int i = 1;i <= level;i++){
-                Double value = Math.pow(levelContain, MAX_LEVEL + 1 -i);
+            for (int i = 1; i <= level; i++) {
+                Double value = Math.pow(levelContain, MAX_LEVEL + 1 - i);
                 int intValue = value.intValue();
                 baseValue += intValue;
             }

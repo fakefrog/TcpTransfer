@@ -26,4 +26,7 @@ public class TeacherBean extends BasePersonBean {
     @EncodeOrderAttribute(level = 2,order = 3,size = 1)
     private Integer teachingAge;
 
+    @EncodeOrderAttribute(level = 2,order = 4,size = 100)
+    private byte[] bytes;
+
 }

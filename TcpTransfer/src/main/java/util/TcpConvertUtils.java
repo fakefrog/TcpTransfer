@@ -16,7 +16,6 @@ import util.testBean.TeacherBean;
 
 public class TcpConvertUtils {
 
-
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory
             .getLogger(PackageUtils.class);
 
@@ -29,7 +28,7 @@ public class TcpConvertUtils {
             Field field = fieldInfo.getField();
             Object fetchObj = field.get(object);
             String typeName = fieldInfo.getTypeName();
-            byte[] bytes = null;
+            byte[] bytes;
             switch (typeName) {
                 case "Integer":
                     Integer value = (Integer) fetchObj;
@@ -48,7 +47,7 @@ public class TcpConvertUtils {
                     }
                     break;
                 case "Byte[]":
-                    bytes = (byte[])fetchObj;
+                    bytes = (byte[]) fetchObj;
                     bytesList.add(bytes);
                     break;
                 default:
@@ -240,7 +239,6 @@ public class TcpConvertUtils {
                 int intValue = value.intValue();
                 baseValue += intValue;
             }
-
             return baseValue;
         }
     }
